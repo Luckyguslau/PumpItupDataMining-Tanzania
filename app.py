@@ -349,9 +349,9 @@ with st.sidebar:
     with st.expander("DEVELOPMENT TEAM", expanded=False):
         team_members = [
             {"name": "Lucky Bima Bahari Guslau", "NIM": "00000107738", "photo": "Lucky.png"},
-            {"name": "Kenneth Edbert Aliwarga", "NIM": "00000080925", "photo": "Kenneth.png"},
-            {"name": "Muhammad Faiq Hakim Ulinnuha", "NIM": "00000110782", "photo": "Hakim.png"},
-            {"name": "Quenessa Salamintargo", "NIM": "00000089201", "photo": "Quenessa.png"}
+            {"name": "Kenneth Edbert Aliwarga", "NIM": "00000080925"},
+            {"name": "Muhammad Faiq Hakim Ulinnuha", "NIM": "00000110782"},
+            {"name": "Quenessa Salamintargo", "NIM": "00000089201"}
         ]
         
         for i, member in enumerate(team_members):
