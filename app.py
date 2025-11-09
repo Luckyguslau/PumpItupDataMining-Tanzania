@@ -407,42 +407,49 @@ feature_groups = {
     "PUMP CONFIGURATION": ['waterpoint_type', 'waterpoint_type_group']
 }
 
-# Create input fields organized by categories
+# Create input fields organized by categories - SEMUA SECTION DITAMPILKAN LANGSUNG
 for group_name, features in feature_groups.items():
-    with st.expander(group_name, expanded=False):
-        cols = st.columns(3)
-        col_idx = 0
-        
-        for col in features:
-            if col in preprocessor['used_columns']:
-                with cols[col_idx % 3]:
-                    if col in preprocessor['categorical_cols']:
-                        # For categorical features
-                        options = list(preprocessor['label_mappings'][col].keys())
-                        user_input[col] = st.selectbox(
+    # Ganti expander dengan container biasa dan header
+    st.markdown(f"<h3 style='margin-top: 2rem;'>{group_name}</h3>", unsafe_allow_html=True)
+    
+    # Container untuk input fields dengan background
+    st.markdown("<div style='background-color: rgba(26, 26, 26, 0.9); padding: 1.5rem; border-radius: 4px; margin-bottom: 1rem;'>", unsafe_allow_html=True)
+    
+    cols = st.columns(3)
+    col_idx = 0
+    
+    for col in features:
+        if col in preprocessor['used_columns']:
+            with cols[col_idx % 3]:
+                if col in preprocessor['categorical_cols']:
+                    # For categorical features
+                    options = list(preprocessor['label_mappings'][col].keys())
+                    user_input[col] = st.selectbox(
+                        label=f"{col.replace('_', ' ').title()}",
+                        options=options,
+                        index=0,
+                        key=col
+                    )
+                else:
+                    # For numerical features
+                    if col in slider_ranges:
+                        min_val, max_val, default_val = slider_ranges[col]
+                        user_input[col] = st.slider(
                             label=f"{col.replace('_', ' ').title()}",
-                            options=options,
-                            index=0,
+                            min_value=min_val,
+                            max_value=max_val,
+                            value=default_val,
                             key=col
                         )
                     else:
-                        # For numerical features
-                        if col in slider_ranges:
-                            min_val, max_val, default_val = slider_ranges[col]
-                            user_input[col] = st.slider(
-                                label=f"{col.replace('_', ' ').title()}",
-                                min_value=min_val,
-                                max_value=max_val,
-                                value=default_val,
-                                key=col
-                            )
-                        else:
-                            user_input[col] = st.number_input(
-                                label=f"{col.replace('_', ' ').title()}",
-                                value=0.0,
-                                key=col
-                            )
-                col_idx += 1
+                        user_input[col] = st.number_input(
+                            label=f"{col.replace('_', ' ').title()}",
+                            value=0.0,
+                            key=col
+                        )
+            col_idx += 1
+    
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # Prediction button
 if st.button("ANALYZE PUMP STATUS", type="primary", use_container_width=True):
