@@ -40,9 +40,9 @@ def get_base64_of_bin_file(bin_file):
         return ""
 
 # Set paths for model and preprocessor
-MODEL_PATH = os.path.join(os.path.dirname(__file__), '../notebooks/random_forest_model.pkl')
-PREPROCESSOR_PATH = os.path.join(os.path.dirname(__file__), '../notebooks/preprocessor.pkl')
-PHOTOS_PATH = os.path.join(os.path.dirname(__file__), '../photos/')
+MODEL_PATH = os.path.join(os.path.dirname(__file__), 'notebooks/random_forest_model.pkl')
+PREPROCESSOR_PATH = os.path.join(os.path.dirname(__file__), 'notebooks/preprocessor.pkl')
+PHOTOS_PATH = os.path.join(os.path.dirname(__file__), 'photos/')
 WATER_IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'WaterTanzania.png')
 
 # Encode background image
