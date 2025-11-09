@@ -18,11 +18,10 @@ st.set_page_config(
 # Fungsi untuk mengencode gambar ke base64 dengan error handling
 def get_base64_of_bin_file(bin_file):
     try:
-        # Coba beberapa path yang mungkin
         possible_paths = [
-            bin_file,  # Path relatif
-            os.path.join(os.path.dirname(__file__), bin_file),  # Path absolute dari app.py
-            os.path.join(os.getcwd(), bin_file)  # Path dari working directory
+            bin_file,
+            os.path.join(os.path.dirname(__file__), bin_file),
+            os.path.join(os.getcwd(), bin_file)
         ]
         
         for file_path in possible_paths:
@@ -31,7 +30,6 @@ def get_base64_of_bin_file(bin_file):
                     data = f.read()
                 return base64.b64encode(data).decode()
         
-        # Jika file tidak ditemukan, return empty string
         st.warning(f"Background image {bin_file} not found. Using default background.")
         return ""
         
@@ -39,11 +37,12 @@ def get_base64_of_bin_file(bin_file):
         st.warning(f"Could not load background image: {str(e)}")
         return ""
 
-# Set paths for model and preprocessor
+# Set paths
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'notebooks/random_forest_model.pkl')
 PREPROCESSOR_PATH = os.path.join(os.path.dirname(__file__), 'notebooks/preprocessor.pkl')
 PHOTOS_PATH = os.path.join(os.path.dirname(__file__), 'photos/')
 WATER_IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'WaterTanzania.png')
+TRAINING_DATA_PATH = os.path.join(os.path.dirname(__file__), 'data/training set values.csv')
 
 # Encode background image
 water_bg_base64 = get_base64_of_bin_file(WATER_IMAGE_PATH)
@@ -56,7 +55,6 @@ def load_model():
         with open(PREPROCESSOR_PATH, 'rb') as f:
             preprocessor = pickle.load(f)
         
-        # Validate preprocessor structure
         required_keys = ['used_columns', 'label_mappings', 'scaler', 'numerical_cols', 'categorical_cols']
         if not all(key in preprocessor for key in required_keys):
             st.error("Invalid preprocessor structure!")
@@ -72,15 +70,51 @@ model, preprocessor = load_model()
 if model is None or preprocessor is None:
     st.stop()
 
+# Load region mapping from training data
+@st.cache_data
+def load_region_mapping():
+    try:
+        # Try to read the training data
+        training_data = pd.read_csv(TRAINING_DATA_PATH)
+        
+        # Create mapping from region to region_code
+        region_mapping = {}
+        reverse_mapping = {}
+        
+        # Group by region and get the most common region_code for each region
+        region_groups = training_data.groupby('region')['region_code'].agg(lambda x: x.mode().iloc[0] if len(x.mode()) > 0 else x.iloc[0])
+        
+        for region, region_code in region_groups.items():
+            region_mapping[region] = int(region_code)
+            reverse_mapping[int(region_code)] = region
+        
+        return region_mapping, reverse_mapping
+        
+    except Exception as e:
+        st.warning(f"Could not load training data: {str(e)}. Using fallback mapping.")
+        # Fallback mapping based on common Tanzania regions
+        fallback_mapping = {
+            'Arusha': 2, 'Dar es Salaam': 7, 'Dodoma': 1, 'Geita': 19, 'Iringa': 11,
+            'Kagera': 18, 'Kaskazini Pemba': 8, 'Kaskazini Unguja': 8, 'Katavi': 15,
+            'Kigoma': 16, 'Kilimanjaro': 3, 'Kusini Pemba': 8, 'Kusini Unguja': 8,
+            'Lindi': 80, 'Manyara': 21, 'Mara': 20, 'Mbeya': 12, 'Mjini Magharibi': 8,
+            'Morogoro': 5, 'Mtwara': 9, 'Mwanza': 19, 'Njombe': 11, 'Pwani': 6,
+            'Rukwa': 15, 'Ruvuma': 10, 'Shinyanga': 17, 'Simiyu': 17, 'Singida': 13,
+            'Songwe': 12, 'Tabora': 14, 'Tanga': 4
+        }
+        reverse_fallback = {v: k for k, v in fallback_mapping.items()}
+        return fallback_mapping, reverse_fallback
+
+# Get region mappings
+region_mapping, reverse_region_mapping = load_region_mapping()
+
 # Function to preprocess user input
 def preprocess_input(user_input):
-    # Create DataFrame from user input
     df = pd.DataFrame([user_input])
     
     # Ensure all required columns exist
     for col in preprocessor['used_columns']:
         if col not in df.columns:
-            # Fill missing columns with default values
             default_value = -1 if col in preprocessor['categorical_cols'] else 0.0
             df[col] = default_value
     
@@ -88,7 +122,6 @@ def preprocess_input(user_input):
     for col in preprocessor['categorical_cols']:
         if col in df.columns:
             mapping = preprocessor['label_mappings'].get(col, {})
-            # If value not in mapping, use default (unknown)
             df[col] = df[col].apply(lambda x: mapping.get(x, -1))
     
     # Scaling for numerical features
@@ -100,7 +133,7 @@ def preprocess_input(user_input):
     
     return df
 
-# Custom CSS for ultra-minimal design dengan background waterTanzania.jpg
+# Custom CSS
 background_style = f"""
     background: linear-gradient(rgba(0, 0, 0, 0.50), rgba(0, 0, 0, 0.80)),
                 url("data:image/jpg;base64,{water_bg_base64}");
@@ -112,18 +145,13 @@ background_style = f"""
 
 st.markdown(f"""
 <style>
-    /* BACKGROUND DENGAN GAMBAR WATERTANZANIA.png */
     .stApp {{
         {background_style}
     }}
-    
-    /* Base styling */
     .main {{
         background-color: transparent;
         color: #f0f0f0;
     }}
-    
-    /* Headers */
     h1 {{
         color: #f0f0f0;
         font-size: 3rem;
@@ -133,24 +161,6 @@ st.markdown(f"""
         border-bottom: 2px solid #ffcc00;
         padding-bottom: 1rem;
     }}
-    
-    h2 {{
-        color: #f0f0f0;
-        font-size: 1.5rem;
-        font-weight: 400;
-        margin-bottom: 2rem;
-        opacity: 0;
-        animation: fadeIn 0.8s ease-out 0.2s forwards;
-    }}
-    
-    h3 {{
-        color: #f0f0f0;
-        font-size: 1.2rem;
-        font-weight: 400;
-        margin: 2rem 0 1rem 0;
-    }}
-    
-    /* Expanders */
     .streamlit-expanderHeader {{
         background-color: rgba(26, 26, 26, 0.9);
         color: #f0f0f0;
@@ -163,38 +173,16 @@ st.markdown(f"""
         transition: all 0.3s ease;
         backdrop-filter: blur(10px);
     }}
-    
     .streamlit-expanderHeader:hover {{
         background-color: rgba(37, 37, 37, 0.9);
         box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }}
-    
     .streamlit-expanderContent {{
         background-color: rgba(26, 26, 26, 0.9);
         border: none;
         padding: 1.5rem;
         backdrop-filter: blur(10px);
     }}
-    
-    /* Input fields */
-    .stSelectbox, .stSlider, .stNumberInput {{
-        margin-bottom: 1.5rem;
-    }}
-    
-    label {{
-        color: #f0f0f0 !important;
-        font-size: 0.9rem !important;
-        font-weight: 300 !important;
-        margin-bottom: 0.5rem !important;
-    }}
-    
-    .st-bb, .st-at, .st-ae {{
-        background-color: rgba(37, 37, 37, 0.9);
-        border: 1px solid #333;
-        color: #f0f0f0;
-    }}
-    
-    /* Button */
     .stButton > button {{
         background-color: #ffcc00;
         color: #101010;
@@ -207,14 +195,11 @@ st.markdown(f"""
         transition: all 0.3s ease;
         margin: 2rem 0;
     }}
-    
     .stButton > button:hover {{
         background-color: #ffd633;
         box-shadow: 0 8px 25px rgba(255, 204, 0, 0.3);
         transform: translateY(-2px);
     }}
-    
-    /* Prediction result */
     .prediction-result {{
         background-color: rgba(26, 26, 26, 0.9);
         padding: 3rem;
@@ -227,95 +212,9 @@ st.markdown(f"""
         border-left: 4px solid #ffcc00;
         backdrop-filter: blur(10px);
     }}
-    
-    .prediction-title {{
-        font-size: 1.2rem;
-        color: #888;
-        margin-bottom: 1rem;
-        font-weight: 300;
-    }}
-    
-    .prediction-value {{
-        font-size: 2.5rem;
-        font-weight: 300;
-        color: #ffcc00;
-        margin: 1rem 0;
-    }}
-    
-    /* Confidence metrics */
-    .stMetric {{
-        background-color: rgba(26, 26, 26, 0.9);
-        padding: 1.5rem;
-        border-radius: 4px;
-        border: 1px solid rgba(37, 37, 37, 0.9);
-        transition: all 0.3s ease;
-        backdrop-filter: blur(10px);
-    }}
-    
-    .stMetric:hover {{
-        border-color: #333;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    }}
-    
-    .stMetric label {{
-        color: #888 !important;
-        font-size: 0.8rem !important;
-        font-weight: 300 !important;
-    }}
-    
-    .stMetric div {{
-        color: #f0f0f0 !important;
-        font-size: 1.5rem !important;
-        font-weight: 300 !important;
-    }}
-    
-    /* Sidebar */
-    .css-1d391kg, .css-1lcbmhc {{
-        background-color: rgba(26, 26, 26, 0.9);
-        border-right: 1px solid rgba(37, 37, 37, 0.9);
-    }}
-    
-    .sidebar .sidebar-content {{
-        background-color: rgba(26, 26, 26, 0.9);
-        backdrop-filter: blur(10px);
-    }}
-    
-    /* Animations */
-    @keyframes fadeIn {{
-        from {{ opacity: 0; transform: translateY(10px); }}
-        to {{ opacity: 1; transform: translateY(0); }}
-    }}
-    
     @keyframes scaleUp {{
         from {{ opacity: 0; transform: scale(0.95); }}
         to {{ opacity: 1; transform: scale(1); }}
-    }}
-    
-    /* Team members */
-    .team-member {{
-        padding: 1rem 0;
-        border-bottom: 1px solid rgba(37, 37, 37, 0.9);
-        opacity: 0;
-        animation: fadeIn 0.6s ease-out forwards;
-    }}
-    
-    .team-member:last-child {{
-        border-bottom: none;
-    }}
-    
-    /* Utility classes */
-    .fade-in {{
-        opacity: 0;
-        animation: fadeIn 0.8s ease-out forwards;
-    }}
-    
-    .delayed-1 {{ animation-delay: 0.3s; }}
-    .delayed-2 {{ animation-delay: 0.6s; }}
-    .delayed-3 {{ animation-delay: 0.9s; }}
-    
-    /* Scroll behavior */
-    html {{
-        scroll-behavior: smooth;
     }}
 </style>
 """, unsafe_allow_html=True)
@@ -331,54 +230,10 @@ with st.sidebar:
         <p><strong>Features Used:</strong> {len(preprocessor['used_columns'])}</p>
         <p><strong>Categorical Features:</strong> {len(preprocessor['categorical_cols'])}</p>
         <p><strong>Numerical Features:</strong> {len(preprocessor['numerical_cols'])}</p>
-        <p style='margin-top: 1rem; color: #888;'>
-        Predictive model analyzing water pump operational status using optimized feature selection for maximum accuracy and efficiency.
-        </p>
         </div>
         """, unsafe_allow_html=True)
-    
-    with st.expander("USAGE GUIDE", expanded=False):
-        st.markdown("""
-        <div style='color: #f0f0f0; font-size: 0.9rem; line-height: 1.6;'>
-        <p>1. Complete all input fields</p>
-        <p>2. Initiate prediction analysis</p>
-        <p>3. Review system assessment</p>
-        </div>
-        """, unsafe_allow_html=True)
-    
-    with st.expander("DEVELOPMENT TEAM", expanded=False):
-        team_members = [
-            {"name": "Lucky Bima Bahari Guslau", "NIM": "00000107738", "photo": "Lucky.jpg"},
-            {"name": "Kenneth Edbert Aliwarga", "NIM": "00000080925", "photo": "Kenneth.png"},
-            {"name": "Muhammad Faiq Hakim Ulinnuha", "NIM": "00000110782", "photo": "Hakim.png"},
-            {"name": "Quenessa Salamintargo", "NIM": "00000089201", "photo": "Quenessa.png"}
-        ]
-        
-        for i, member in enumerate(team_members):
-            st.markdown(f"<div class='team-member delayed-{i%3+1}'>", unsafe_allow_html=True)
-            col1, col2 = st.columns([1, 3])
-            with col1:
-                try:
-                    photo_path = os.path.join(PHOTOS_PATH, member["photo"])
-                    img = Image.open(photo_path)
-                    img.thumbnail((80, 80))
-                    st.image(img, width=60, use_container_width=True, output_format='PNG')
-                except Exception as e:
-                    st.image("https://via.placeholder.com/60", width=60, use_container_width=True)
-            with col2:
-                st.markdown(f"""
-                <div style='color: #f0f0f0; font-size: 0.8rem; margin-top: 0.5rem;'>
-                <strong>{member['name']}</strong><br>
-                <span style='color: #888;'>{member['NIM']}</span>
-                </div>
-                """, unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
-    
-    st.markdown("</div>", unsafe_allow_html=True)
 
 # Main app content
-st.markdown("<div class='fade-in'>", unsafe_allow_html=True)
-
 st.title("Water Pump Status Prediction in Tanzania")
 
 st.markdown("""
@@ -387,10 +242,16 @@ System analysis for water pump operational status assessment using optimized fea
 </div>
 """, unsafe_allow_html=True)
 
+# Initialize session state for region and region_code
+if 'region' not in st.session_state:
+    st.session_state.region = 'Arusha'
+if 'region_code' not in st.session_state:
+    st.session_state.region_code = 2
+
 # Input form
 user_input = {}
 
-# Define slider ranges for specific numerical features
+# Define slider ranges
 slider_ranges = {
     'amount_tsh': (0, 350000, 170000),
     'gps_height': (-90, 2650, 1300),
@@ -398,7 +259,7 @@ slider_ranges = {
     'region_code': (1, 99, 50)
 }
 
-# Group features by category based on the 15 important features
+# Feature groups
 feature_groups = {
     "WATER CHARACTERISTICS": ['quantity', 'quantity_group', 'source'],
     "LOCATION INFORMATION": ['lga', 'region_code', 'region', 'basin'],
@@ -417,16 +278,60 @@ for group_name, features in feature_groups.items():
             if col in preprocessor['used_columns']:
                 with cols[col_idx % 3]:
                     if col in preprocessor['categorical_cols']:
-                        # For categorical features
                         options = list(preprocessor['label_mappings'][col].keys())
-                        user_input[col] = st.selectbox(
-                            label=f"{col.replace('_', ' ').title()}",
-                            options=options,
-                            index=0,
-                            key=col
-                        )
+                        
+                        # Special handling for region and region_code synchronization
+                        if col == 'region':
+                            # Filter available regions to only those in our mapping
+                            available_regions = [r for r in options if r in region_mapping]
+                            
+                            selected_region = st.selectbox(
+                                label=f"{col.replace('_', ' ').title()}",
+                                options=available_regions,
+                                index=available_regions.index(st.session_state.region) if st.session_state.region in available_regions else 0,
+                                key=f"{col}_select"
+                            )
+                            
+                            # Update region_code when region changes
+                            if selected_region != st.session_state.region:
+                                st.session_state.region = selected_region
+                                if selected_region in region_mapping:
+                                    st.session_state.region_code = region_mapping[selected_region]
+                                st.rerun()
+                            
+                            user_input[col] = st.session_state.region
+                            
+                        elif col == 'region_code':
+                            # Get all available region codes from our mapping
+                            available_codes = list(reverse_region_mapping.keys())
+                            min_code = min(available_codes) if available_codes else 1
+                            max_code = max(available_codes) if available_codes else 99
+                            
+                            selected_region_code = st.slider(
+                                label=f"{col.replace('_', ' ').title()}",
+                                min_value=min_code,
+                                max_value=max_code,
+                                value=st.session_state.region_code,
+                                key=f"{col}_slider"
+                            )
+                            
+                            # Update region when region_code changes
+                            if selected_region_code != st.session_state.region_code:
+                                st.session_state.region_code = selected_region_code
+                                if selected_region_code in reverse_region_mapping:
+                                    st.session_state.region = reverse_region_mapping[selected_region_code]
+                                st.rerun()
+                            
+                            user_input[col] = st.session_state.region_code
+                            
+                        else:
+                            user_input[col] = st.selectbox(
+                                label=f"{col.replace('_', ' ').title()}",
+                                options=options,
+                                index=0,
+                                key=col
+                            )
                     else:
-                        # For numerical features
                         if col in slider_ranges:
                             min_val, max_val, default_val = slider_ranges[col]
                             user_input[col] = st.slider(
@@ -443,6 +348,14 @@ for group_name, features in feature_groups.items():
                                 key=col
                             )
                 col_idx += 1
+
+# Display current synchronization status
+st.markdown(f"""
+<div style='background-color: rgba(26, 26, 26, 0.9); padding: 1rem; border-radius: 4px; margin: 1rem 0; border-left: 4px solid #ffcc00;'>
+    <div style='color: #888; font-size: 0.9rem;'>Current Selection:</div>
+    <div style='color: #ffcc00; font-size: 1.1rem;'>Region: <strong>{st.session_state.region}</strong> | Region Code: <strong>{st.session_state.region_code}</strong></div>
+</div>
+""", unsafe_allow_html=True)
 
 # Prediction button
 if st.button("ANALYZE PUMP STATUS", type="primary", use_container_width=True):
@@ -462,7 +375,7 @@ if st.button("ANALYZE PUMP STATUS", type="primary", use_container_width=True):
         
         status_text, status_color = status_map.get(pred, ("Unknown", "#74c0fc"))
         
-        # Display result with minimal styling
+        # Display result
         st.markdown(
             f"""
             <div class='prediction-result'>
@@ -488,5 +401,3 @@ if st.button("ANALYZE PUMP STATUS", type="primary", use_container_width=True):
     except Exception as e:
         st.error(f"Analysis error: {str(e)}")
         st.error("Please verify all input parameters are correctly configured.")
-
-st.markdown("</div>", unsafe_allow_html=True)
