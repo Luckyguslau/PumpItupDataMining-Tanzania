@@ -42,7 +42,6 @@ def get_base64_of_bin_file(bin_file):
 # Set paths for model and preprocessor
 MODEL_PATH = os.path.join(os.path.dirname(__file__), 'notebooks/random_forest_model.pkl')
 PREPROCESSOR_PATH = os.path.join(os.path.dirname(__file__), 'notebooks/preprocessor.pkl')
-PHOTOS_PATH = os.path.join(os.path.dirname(__file__), 'photos/')
 WATER_IMAGE_PATH = os.path.join(os.path.dirname(__file__), 'WaterTanzania.png')
 
 # Encode background image
@@ -291,18 +290,6 @@ st.markdown(f"""
         to {{ opacity: 1; transform: scale(1); }}
     }}
     
-    /* Team members */
-    .team-member {{
-        padding: 1rem 0;
-        border-bottom: 1px solid rgba(37, 37, 37, 0.9);
-        opacity: 0;
-        animation: fadeIn 0.6s ease-out forwards;
-    }}
-    
-    .team-member:last-child {{
-        border-bottom: none;
-    }}
-    
     /* Utility classes */
     .fade-in {{
         opacity: 0;
@@ -346,34 +333,6 @@ with st.sidebar:
         </div>
         """, unsafe_allow_html=True)
     
-    with st.expander("DEVELOPMENT TEAM", expanded=False):
-        team_members = [
-            {"name": "Lucky Bima Bahari Guslau", "NIM": "00000107738", "photo": "Lucky.jpg"},
-            {"name": "Kenneth Edbert Aliwarga", "NIM": "00000080925", "photo": "Kenneth.png"},
-            {"name": "Muhammad Faiq Hakim Ulinnuha", "NIM": "00000110782", "photo": "Hakim.png"},
-            {"name": "Quenessa Salamintargo", "NIM": "00000089201", "photo": "Quenessa.png"}
-        ]
-        
-        for i, member in enumerate(team_members):
-            st.markdown(f"<div class='team-member delayed-{i%3+1}'>", unsafe_allow_html=True)
-            col1, col2 = st.columns([1, 3])
-            with col1:
-                try:
-                    photo_path = os.path.join(PHOTOS_PATH, member["photo"])
-                    img = Image.open(photo_path)
-                    img.thumbnail((80, 80))
-                    st.image(img, width=60, use_container_width=True, output_format='PNG')
-                except Exception as e:
-                    st.image("https://via.placeholder.com/60", width=60, use_container_width=True)
-            with col2:
-                st.markdown(f"""
-                <div style='color: #f0f0f0; font-size: 0.8rem; margin-top: 0.5rem;'>
-                <strong>{member['name']}</strong><br>
-                <span style='color: #888;'>{member['NIM']}</span>
-                </div>
-                """, unsafe_allow_html=True)
-            st.markdown("</div>", unsafe_allow_html=True)
-    
     st.markdown("</div>", unsafe_allow_html=True)
 
 # Main app content
@@ -407,49 +366,42 @@ feature_groups = {
     "PUMP CONFIGURATION": ['waterpoint_type', 'waterpoint_type_group']
 }
 
-# Create input fields organized by categories - SEMUA SECTION DITAMPILKAN LANGSUNG
+# Create input fields organized by categories
 for group_name, features in feature_groups.items():
-    # Ganti expander dengan container biasa dan header
-    st.markdown(f"<h3 style='margin-top: 2rem;'>{group_name}</h3>", unsafe_allow_html=True)
-    
-    # Container untuk input fields dengan background
-    st.markdown("<div style='background-color: rgba(26, 26, 26, 0.9); padding: 1.5rem; border-radius: 4px; margin-bottom: 1rem;'>", unsafe_allow_html=True)
-    
-    cols = st.columns(3)
-    col_idx = 0
-    
-    for col in features:
-        if col in preprocessor['used_columns']:
-            with cols[col_idx % 3]:
-                if col in preprocessor['categorical_cols']:
-                    # For categorical features
-                    options = list(preprocessor['label_mappings'][col].keys())
-                    user_input[col] = st.selectbox(
-                        label=f"{col.replace('_', ' ').title()}",
-                        options=options,
-                        index=0,
-                        key=col
-                    )
-                else:
-                    # For numerical features
-                    if col in slider_ranges:
-                        min_val, max_val, default_val = slider_ranges[col]
-                        user_input[col] = st.slider(
+    with st.expander(group_name, expanded=False):
+        cols = st.columns(3)
+        col_idx = 0
+        
+        for col in features:
+            if col in preprocessor['used_columns']:
+                with cols[col_idx % 3]:
+                    if col in preprocessor['categorical_cols']:
+                        # For categorical features
+                        options = list(preprocessor['label_mappings'][col].keys())
+                        user_input[col] = st.selectbox(
                             label=f"{col.replace('_', ' ').title()}",
-                            min_value=min_val,
-                            max_value=max_val,
-                            value=default_val,
+                            options=options,
+                            index=0,
                             key=col
                         )
                     else:
-                        user_input[col] = st.number_input(
-                            label=f"{col.replace('_', ' ').title()}",
-                            value=0.0,
-                            key=col
-                        )
-            col_idx += 1
-    
-    st.markdown("</div>", unsafe_allow_html=True)
+                        # For numerical features
+                        if col in slider_ranges:
+                            min_val, max_val, default_val = slider_ranges[col]
+                            user_input[col] = st.slider(
+                                label=f"{col.replace('_', ' ').title()}",
+                                min_value=min_val,
+                                max_value=max_val,
+                                value=default_val,
+                                key=col
+                            )
+                        else:
+                            user_input[col] = st.number_input(
+                                label=f"{col.replace('_', ' ').title()}",
+                                value=0.0,
+                                key=col
+                            )
+                col_idx += 1
 
 # Prediction button
 if st.button("ANALYZE PUMP STATUS", type="primary", use_container_width=True):
