@@ -348,7 +348,10 @@ with st.sidebar:
     
     with st.expander("DEVELOPMENT TEAM", expanded=False):
         team_members = [
-            {"name": "Lucky Bima Bahari Guslau", "id": "00000107738", "photo": "lucky.png"},
+            {"name": "Lucky Bima Bahari Guslau", "NIM": "00000107738", "photo": "lucky.png"},
+            {"name": "Kenneth Edbert Aliwarga", "NIM": "00000080925", "photo": "kenneth.png"},
+            {"name": "Muhammad Faiq Hakim Ulinnuha", "NIM": "00000110782", "photo": "hakim.png"},
+            {"name": "Quenessa Salamintargo", "NIM": "00000089201", "photo": "quenessa.png"}
         ]
         
         for i, member in enumerate(team_members):
@@ -376,7 +379,7 @@ with st.sidebar:
 # Main app content
 st.markdown("<div class='fade-in'>", unsafe_allow_html=True)
 
-st.title("Water Pump Status Prediction")
+st.title("Water Pump Status Prediction in Tanzania")
 
 st.markdown("""
 <div style='color: #888; font-size: 1.1rem; line-height: 1.6; margin-bottom: 3rem;'>
