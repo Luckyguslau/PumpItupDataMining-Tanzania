@@ -369,7 +369,7 @@ with st.sidebar:
                 st.markdown(f"""
                 <div style='color: #f0f0f0; font-size: 0.8rem; margin-top: 0.5rem;'>
                 <strong>{member['name']}</strong><br>
-                <span style='color: #888;'>{member['id']}</span>
+                <span style='color: #888;'>{member['NIM']}</span>
                 </div>
                 """, unsafe_allow_html=True)
             st.markdown("</div>", unsafe_allow_html=True)
